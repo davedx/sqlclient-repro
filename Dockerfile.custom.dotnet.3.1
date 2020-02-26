@@ -1,0 +1,27 @@
+# For more info see: http://aka.ms/VSContainerToolingDockerfiles
+FROM mcr.microsoft.com/dotnet/core/aspnet:3.1 AS base
+WORKDIR /app
+EXPOSE 80
+
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS builder
+WORKDIR /src
+
+COPY EFGetStarted.csproj ./
+
+RUN dotnet restore -nowarn:msb3202,nu1503 -p:RestoreUseSkipNonexistentTargets=false
+
+COPY . .
+
+WORKDIR /src
+RUN dotnet build -c Release -o /app
+
+FROM builder AS publish
+RUN dotnet publish -c Release -o /app --runtime linux-x64
+
+FROM base AS production
+
+WORKDIR /app
+COPY --from=publish /app .
+
+ENV PROJECT_NAME EFGetStarted
+CMD ["/bin/bash", "-c", "dotnet EFGetStarted.dll"]
